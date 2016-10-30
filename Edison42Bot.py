@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import logging
 import os
 import psycopg2
@@ -11,7 +12,7 @@ with open(token_file, 'r', encoding='utf-8') as f:
 
 # bot password
 pass_file = '/scripts/bots/bot_pass.txt'
-with open(token_file, 'r', encoding='utf-8') as f:
+with open(pass_file, 'r', encoding='utf-8') as f:
     bot_pass = f.readline()
 
 updater = Updater(token=tok)
@@ -33,11 +34,11 @@ start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
 updater.start_polling()
 
- def prcp(bot, update, args):
+def prcp(bot, update, args):
     arg_list = args
-	arg_len = len(args)
-	if arg_len == 3:
-		data_text = prcp_srch_3(arg_list[0], arg_list[1], arg_list[2])
+    arg_len = len(args)
+    if arg_len == 3:
+        data_text = prcp_srch_3(arg_list[0], arg_list[1], arg_list[2])
     bot.sendMessage(chat_id=update.message.chat_id, text=data_text)
 
 prcp_handler = CommandHandler('prcp', prcp, pass_args=True)
@@ -54,7 +55,7 @@ def prcp_srch_3(pt_id, std, etd):
 	where pt_id = {pt_id} and date >= '{std}' and date <= '{etd}' order by date".format(
 	pt_id=int(pt_id), std=pyd_std, etd=pyd_etd))
 	db_out = cur.fetchall()
-	out_text = "date, mean, median"
+	out_text = "date, mean, median\n"
 	for i in db_out:
 		dt = i[0]
 		out_text = out_text + dt + '\n'
