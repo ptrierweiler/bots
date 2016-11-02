@@ -35,12 +35,12 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 #/pcrp - for precipitation data"
 
 start_text = text_loader("start.txt")
-
+help_text = text_loader("help.txt")
 
 def start(bot, update):
    bot.sendMessage(chat_id=update.message.chat_id, text=start_text)
 
-def help(bot,update):
+def help(bot, update):
     bot.sendMessage(chat_id=update.message.chat_id, text=help_text)
     
    
@@ -48,6 +48,7 @@ from telegram.ext import CommandHandler
 start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', help)
 dispatcher.add_handler(start_handler)
+dispatcher.add_handler(help_handler)
 updater.start_polling()
 
 def prcp(bot, update, args):
@@ -55,9 +56,11 @@ def prcp(bot, update, args):
     arg_len = len(args)
     if arg_len == 3:
         data_text = prcp_srch_3(arg_list[0], arg_list[1], arg_list[2])
+    elif arg_len == 2:
+        data_text = prcp_srch_2(arg_list[0], arg_list[1])
     bot.sendMessage(chat_id=update.message.chat_id, text=data_text)
 
-
+    
 def prcp_srch_3(pt_id,_std, etd):
 	# converting date strings to python datetime
     pyd_std = datetime.strptime(std, '%Y-%m-%d')
@@ -77,8 +80,40 @@ def prcp_srch_3(pt_id,_std, etd):
     cur.close()
     conn.close()
     return out_text
-	
 
+    
+def prcp_srch_2(pt_id,var):
+    conn = psycopg2.connect("dbname='fato' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
+    cur = conn.cursor()
+    cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
+    where pt_id = {pt_id} and date in (select max(date) from cpc_glb_dly_prec.data) order by date".format(
+    pt_id=int(pt_id)))
+    max_val = cur.fetchall()
+    if var == 'now':
+        out_text = "\t date mean median\n"
+        for i in max_val:
+            dt = i[0]
+            mn = i[1]
+            md = i[2]
+            out_text = out_text + "{dt}: {mn} : {md}\n".format(dt=dt, mn=mn, md=md)
+    else:
+        max_date = max_val[0][0]
+        str_date = max_date - timedelta(int(var))
+        cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
+        where pt_id = {pt_id} and date >= '{std}' and date <= '{etd}' order by date".format(
+        pt_id=int(pt_id), std=str_date, etd=max_date))
+        db_out = cur.fetchall()
+        out_text = "\t date mean median\n"
+        for i in db_out:
+            dt = i[0]
+            mn = i[1]
+            md = i[2]
+            out_text = out_text + "{dt}: {mn} : {md}\n".format(dt=dt, mn=mn, md=md)
+    cur.close()
+    conn.close()
+    return out_text
+           
+        
 def prcp_chart(sql_out,geo):
     date = []
     mean = []
