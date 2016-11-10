@@ -3,7 +3,9 @@ import logging
 import os
 import psycopg2
 from telegram.ext import Updater
+import telegram
 from datetime import datetime, timedelta
+import calendar
 
 # reading token from token file
 token_file = '/scripts/bots/Edison42bot_token.txt'
@@ -58,14 +60,23 @@ def prcp(bot, update, args):
         data_text = prcp_srch_3(arg_list[0], arg_list[1], arg_list[2])
     elif arg_len == 2:
         data_text = prcp_srch_2(arg_list[0], arg_list[1])
-    bot.sendMessage(chat_id=update.message.chat_id, text=data_text)
+    bot.sendMessage(chat_id=update.message.chat_id, text=data_text,parse_mode=telegram.ParseMode.MARKDOWN)
 
+mon_list = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     
-def prcp_srch_3(pt_id,_std, etd):
-	# converting date strings to python datetime
-    pyd_std = datetime.strptime(std, '%Y-%m-%d')
-    pyd_etd = datetime.strptime(etd, '%Y-%m-%d')
-    conn = psycopg2.connect("dbname='fato' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
+def prcp_srch_3(pt_id, val1, val2):
+	# converting date strings to python datetime 
+    if val1.lower()in mon_list:
+        mon_num = datetime.strptime(val1,'%b').month
+        end_day = calendar.monthrange(int(val2), mon_num)[1]
+        std = "{}-{}-{}".format(val2, str(mon_num).zfill(2), '01')
+        etd = "{}-{}-{}".format(val2, str(mon_num).zfill(2), end_day)
+        pyd_std = datetime.strptime(std, '%Y-%m-%d')
+        pyd_etd = datetime.strptime(etd, '%Y-%m-%d') 
+    else:            
+        pyd_std = datetime.strptime(val1, '%Y-%m-%d')
+        pyd_etd = datetime.strptime(val2, '%Y-%m-%d')
+    conn = psycopg2.connect("dbname='tlaloc' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
     cur = conn.cursor()
     cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
     where pt_id = {pt_id} and date >= '{std}' and date <= '{etd}' order by date".format(
@@ -83,7 +94,7 @@ def prcp_srch_3(pt_id,_std, etd):
 
     
 def prcp_srch_2(pt_id,var):
-    conn = psycopg2.connect("dbname='fato' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
+    conn = psycopg2.connect("dbname='tlaloc' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
     cur = conn.cursor()
     cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
     where pt_id = {pt_id} and date in (select max(date) from cpc_glb_dly_prec.data) order by date".format(
@@ -111,9 +122,9 @@ def prcp_srch_2(pt_id,var):
             out_text = out_text + "{dt}: {mn} : {md}\n".format(dt=dt, mn=mn, md=md)
     cur.close()
     conn.close()
+    
     return out_text
-           
-        
+
 def prcp_chart(sql_out,geo):
     date = []
     mean = []
@@ -122,7 +133,7 @@ def prcp_chart(sql_out,geo):
         date.append(i[0])
         mean.append(i[1])
         med.append(i[2])
-    # adding dummy dates
+    # g dummy dates
     date.insert(0,min(date) - timedelta(1))
     date.insert(len(date)+ 1, max(date) + timedelta(1))
     # adding dummy values
