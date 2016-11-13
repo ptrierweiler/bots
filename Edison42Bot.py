@@ -64,7 +64,7 @@ def prcp(bot, update, args):
 
 mon_list = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     
-def prcp_srch_3(pt_id, val1, val2):
+def prcp_srch_3(gid, val1, val2):
 	# converting date strings to python datetime 
     if val1.lower()in mon_list:
         mon_num = datetime.strptime(val1,'%b').month
@@ -79,8 +79,8 @@ def prcp_srch_3(pt_id, val1, val2):
     conn = psycopg2.connect("dbname='tlaloc' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
     cur = conn.cursor()
     cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
-    where pt_id = {pt_id} and date >= '{std}' and date <= '{etd}' order by date".format(
-    pt_id=int(pt_id), std=pyd_std, etd=pyd_etd))
+    where lower(gid) = lower('{gid}') and date >= '{std}' and date <= '{etd}' order by date".format(
+    gid=gid, std=pyd_std, etd=pyd_etd))
     db_out = cur.fetchall()
     out_text = "\t date mean median\n"
     for i in db_out:
@@ -93,12 +93,12 @@ def prcp_srch_3(pt_id, val1, val2):
     return out_text
 
     
-def prcp_srch_2(pt_id,var):
+def prcp_srch_2(gid,var):
     conn = psycopg2.connect("dbname='tlaloc' host='localhost' user='bot' password='{pas}'".format(pas=bot_pass))
     cur = conn.cursor()
     cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
-    where pt_id = {pt_id} and date in (select max(date) from cpc_glb_dly_prec.data) order by date".format(
-    pt_id=int(pt_id)))
+    where lower(gid) = lower('{gid}') and date in (select max(date) from cpc_glb_dly_prec.data) order by date".format(
+    gid=gid))
     max_val = cur.fetchall()
     if var == 'now':
         out_text = "\t date mean median\n"
@@ -111,8 +111,8 @@ def prcp_srch_2(pt_id,var):
         max_date = max_val[0][0]
         str_date = max_date - timedelta(int(var))
         cur.execute("select date, mean, median as output from cpc_glb_dly_prec.data \
-        where pt_id = {pt_id} and date >= '{std}' and date <= '{etd}' order by date".format(
-        pt_id=int(pt_id), std=str_date, etd=max_date))
+        where lower(gid) = lower('{gid}') and date >= '{std}' and date <= '{etd}' order by date".format(
+        gid=gid, std=str_date, etd=max_date))
         db_out = cur.fetchall()
         out_text = "\t date mean median\n"
         for i in db_out:
